@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Now Tuned",
+  "version": "1.0.0",
+  "permissions": ["tabs", "activeTab", "scripting"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "host_permissions": ["https://music.youtube.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://music.youtube.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "description": "Now Tuned will stream song played on YT Music to remote server.",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
