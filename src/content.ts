@@ -11,7 +11,7 @@ function sendSongData() {
       title: meta.title,
       artist: meta.artist,
       album: meta.album,
-      artwork: meta.artwork?.[0]?.src,
+      artwork: meta.artwork?.[meta.artwork.length - 1]?.src,
     },
   });
 }
