@@ -15,17 +15,24 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-let latestSong: any = null;
+let mediaSession: {
+  metadata: {
+    title: string;
+    artist: string;
+    album: string;
+    artwork: readonly MediaImage[];
+  };
+  playbackState: MediaSessionPlaybackState;
+} | null = null;
 
 chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
   if (message.type === "SONG_UPDATE") {
-    latestSong = message.payload;
-    console.log("Song updated:", latestSong);
+    mediaSession = message.payload;
     // Send to server here if needed
   }
 
   if (message.type === "GET_SONG") {
-    sendResponse(latestSong);
+    sendResponse(mediaSession);
   }
 
   return true; // Keep the message channel open for async sendResponse
