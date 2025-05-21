@@ -31,12 +31,22 @@ const Popup = () => {
   return SongDetails ? (
     <div className="bg-charcoal-black text-white font-lexend-deca h-full w-full">
       <div className="bg-light-green bg-opacity-5 p-2 border-1s border-light-green rounded-md">
-        <p className="font-semibold py-2 text-xs text-light-green">
-          Now {SongDetails.playbackState}...
+        <p
+          className={`font-semibold py-2 text-xs ${
+            SongDetails.playbackState === "paused"
+              ? "text-gray-300"
+              : " text-light-green"
+          }`}
+        >
+          {SongDetails.playbackState === "paused"
+            ? "💤 Offline"
+            : "🎶 Vibes on!"}
         </p>
         <div className="h-48 w-48 rounded-md overflow-clip">
           <img
-            className=""
+            className={
+              SongDetails.playbackState === "paused" ? "grayscale" : ""
+            }
             src={
               SongDetails.metadata.artwork[
                 SongDetails.metadata.artwork.length - 1
@@ -47,12 +57,22 @@ const Popup = () => {
         </div>
         <div className="flex w-full">
           <img
-            className="h-14 w-14 mt-4"
-            src="/headphones.gif"
+            className={`h-14 w-14 mt-4 ${
+              SongDetails.playbackState === "playing" ? "" : "grayscale"
+            }`}
+            src={
+              SongDetails.playbackState === "playing"
+                ? "/headphones.gif"
+                : "/still-headphones.png"
+            }
             alt="headphones animation"
           />
           <div className="ml-2 w-32">
-            <h1 className="text-base py-2 font-bold">
+            <h1
+              className={`${
+                SongDetails.playbackState === "playing" ? "" : "grayscale"
+              } text-base py-2 font-bold`}
+            >
               {SongDetails.metadata.title}
             </h1>
             <p className="text-xs pb-1 text-gray-300">
@@ -66,12 +86,15 @@ const Popup = () => {
       </div>
     </div>
   ) : (
-    <div className="bg-charcoal-black text-white font-lexend-deca h-full w-full">
-      <div className="bg-light-green bg-opacity-5 p-2 border-1s border-light-green rounded-md">
-        <p className="font-semibold py-2 text-xs text-light-green">
-          No song playing...
-        </p>
-      </div>
+    <div className="bg-charcoal-black text-white font-lexend-deca h-max w-48 py-4">
+      <img
+        className="h-32 w-32 mx-auto grayscale"
+        src="/offline-now-tuned.png"
+        alt="Offline Now Tuned"
+      />
+      <p className="font-semibold py-2 text-lg text-gray-300 w-full text-center">
+        💤 Now Tuned - is Offline
+      </p>
     </div>
   );
 };
