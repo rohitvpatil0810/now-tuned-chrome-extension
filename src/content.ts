@@ -28,7 +28,7 @@ function sendSongData() {
 
     // Send a message to update the song data
     chrome.runtime.sendMessage({
-      type: "SONG_UPDATE",
+      type: "TAB_SONG_STATE_UPDATE",
       payload: {
         metadata: {
           title: mediaSession.metadata.title,
