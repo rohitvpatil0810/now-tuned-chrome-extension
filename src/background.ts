@@ -1,4 +1,14 @@
-console.log("I am a background worker...");
+import axios from "axios";
+import { apiEndpoints } from "./constants";
+
+console.log("I am a background worker... clientId: ", chrome.runtime.id);
+
+type ClientInfo = {
+  clientId: string;
+  clientType: string;
+  deviceID: string;
+  tabId?: number;
+};
 
 type TabMusicState = {
   metadata: {
@@ -57,16 +67,19 @@ class PartitionedTabsQueue {
     this.tabsNotPlayingMusic.delete(tabId);
   }
 
-  getWinnerTabState(): TabMusicState | null {
-    const playingTabIterator = this.tabsPlayingMusic.values();
-    const notPlayingTabIterator = this.tabsNotPlayingMusic.values();
+  // returns the TabMusicState of the highest priority tab and tabId
+  getWinnerTabState(): { tabId: number; state: TabMusicState } | null {
+    const playingTabIterator = this.tabsPlayingMusic.entries();
+    const notPlayingTabIterator = this.tabsNotPlayingMusic.entries();
 
     if (this.tabsPlayingMusic.size > 0) {
-      return playingTabIterator.next()?.value ?? null;
+      const entry = playingTabIterator.next()?.value;
+      return entry ? { tabId: entry[0], state: entry[1] } : null;
     }
 
     if (this.tabsNotPlayingMusic.size > 0) {
-      return notPlayingTabIterator.next()?.value ?? null;
+      const entry = notPlayingTabIterator.next()?.value;
+      return entry ? { tabId: entry[0], state: entry[1] } : null;
     }
 
     return null;
@@ -74,6 +87,20 @@ class PartitionedTabsQueue {
 }
 
 const partitionedTabsQueue = new PartitionedTabsQueue();
+
+// Also inject content script into already opened YT Music tabs
+chrome.tabs.query({}, (tabs) => {
+  tabs.forEach((tab) => {
+    if (tab.url?.includes(YOUTUBE_MUSIC_URL) && tab.id) {
+      console.log("Found existing YT Music tab: ", tab.id);
+      console.log("Injecting content script");
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["content.js"],
+      });
+    }
+  });
+});
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (
@@ -110,17 +137,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true; // Keep the message channel open for async sendResponse
 });
 
-const sendSongState = () => {
+// Periodically check for the current winning tab and send its state to popup and sync server
+const sendSongState = async () => {
   const currentTabMusicState = partitionedTabsQueue.getWinnerTabState();
-  if (!areTabMusicStatesEqual(currentTabMusicState, mediaSession)) {
+  if (!currentTabMusicState) {
+    if (mediaSession !== null) {
+      console.log("No tabs playing music. Clearing media session.");
+      return;
+    }
+  }
+
+  const tabId = currentTabMusicState ? currentTabMusicState.tabId : undefined;
+  const winnerTabState = currentTabMusicState
+    ? currentTabMusicState.state
+    : null;
+
+  if (!areTabMusicStatesEqual(winnerTabState, mediaSession)) {
     console.log("Sending song state:", currentTabMusicState);
-    mediaSession = currentTabMusicState;
+    mediaSession = winnerTabState;
     chrome.runtime.sendMessage({
       type: "SONG_UPDATE",
       payload: mediaSession,
     });
 
-    // Send to server here if needed
+    console.log("Posting to sync server...");
+    console.log("Media Session:", mediaSession);
+    // send mediaSession to sync server
+    const client: ClientInfo = {
+      clientId: chrome.runtime.id,
+      clientType: "chrome-extension",
+      deviceID: self.navigator.userAgent,
+      tabId: tabId,
+    };
+    const response = await axios.post(apiEndpoints.UPDATE_MEDIA_SESSION, {
+      client,
+      ...mediaSession,
+    });
+    console.log("Sync server response:", response.data);
   }
 };
 
