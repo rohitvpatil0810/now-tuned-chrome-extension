@@ -116,9 +116,23 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-chrome.tabs.onRemoved.addListener((tabId) => {
+chrome.tabs.onRemoved.addListener(async (tabId) => {
   console.log("Tab removed:", tabId);
   partitionedTabsQueue.removeTabState(tabId);
+
+  // Send delete request to sync server
+  const clientId = `${chrome.runtime.id}-tab-${tabId}`;
+  try {
+    const response = await axios.delete(
+      `${apiEndpoints.DELETE_MEDIA_SESSION}?clientId=${clientId}`
+    );
+    console.log(
+      "Deleted media session from sync server for closed tab:",
+      response.data
+    );
+  } catch (error) {
+    console.error("Error deleting media session from sync server:", error);
+  }
 });
 
 let mediaSession: TabMusicState = null;
@@ -164,7 +178,7 @@ const sendSongState = async () => {
     console.log("Media Session:", mediaSession);
     // send mediaSession to sync server
     const client: ClientInfo = {
-      clientId: chrome.runtime.id,
+      clientId: `${chrome.runtime.id}-tab-${tabId}`,
       clientType: "chrome-extension",
       deviceID: self.navigator.userAgent,
       tabId: tabId,
